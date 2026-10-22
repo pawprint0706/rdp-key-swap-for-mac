@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RdpKeySwap/RdpKeySwap.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RdpKeySwap.Tests/RdpKeySwap.Tests.csproj" />
+  </Folder>
+</Solution>
