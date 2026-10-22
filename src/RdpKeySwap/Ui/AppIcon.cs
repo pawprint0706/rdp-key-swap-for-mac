@@ -1,58 +1,39 @@
-using System.Drawing.Drawing2D;
-using RdpKeySwap.Interop;
+using System.Reflection;
 
 namespace RdpKeySwap.Ui;
 
-/// <summary>Draws the tray icon at runtime: two crossing arrows in a rounded square.</summary>
-internal sealed class AppIcon : IDisposable
+/// <summary>
+/// The application icon is a single embedded .ico that also becomes the executable's icon, so
+/// the file, the window and the tray always show the same artwork at the right size.
+/// </summary>
+internal static class AppIcon
 {
-    private readonly IntPtr _handle;
+    private const string ResourceName = "RdpKeySwap.Assets.app.ico";
 
-    private AppIcon(Icon icon, IntPtr handle)
+    private static Icon? _window;
+    private static Icon? _tray;
+
+    /// <summary>Icon for the settings window and other top-level windows.</summary>
+    public static Icon Window => _window ??= Load(SystemInformation.IconSize);
+
+    /// <summary>Icon for the notification area, sized for the current DPI.</summary>
+    public static Icon Tray => _tray ??= Load(SystemInformation.SmallIconSize);
+
+    public static void Dispose()
     {
-        Icon = icon;
-        _handle = handle;
+        _window?.Dispose();
+        _window = null;
+        _tray?.Dispose();
+        _tray = null;
     }
 
-    public Icon Icon { get; }
-
-    public static AppIcon Create()
+    private static Icon Load(Size size)
     {
-        using var bitmap = new Bitmap(32, 32);
-        using (var graphics = Graphics.FromImage(bitmap))
-        {
-            graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            graphics.Clear(Color.Transparent);
+        var assembly = typeof(AppIcon).Assembly;
+        using var stream = assembly.GetManifestResourceStream(ResourceName)
+            ?? throw new InvalidOperationException($"아이콘 리소스를 찾을 수 없습니다: {ResourceName}");
 
-            using var shape = new GraphicsPath();
-            shape.AddArc(1, 1, 12, 12, 180, 90);
-            shape.AddArc(19, 1, 12, 12, 270, 90);
-            shape.AddArc(19, 19, 12, 12, 0, 90);
-            shape.AddArc(1, 19, 12, 12, 90, 90);
-            shape.CloseFigure();
-
-            using var fill = new SolidBrush(Color.FromArgb(255, 30, 78, 160));
-            graphics.FillPath(fill, shape);
-
-            using var pen = new Pen(Color.White, 2.6f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
-            graphics.DrawLine(pen, 9f, 12f, 23f, 12f);
-            graphics.DrawLine(pen, 23f, 12f, 19f, 8f);
-            graphics.DrawLine(pen, 23f, 12f, 19f, 16f);
-            graphics.DrawLine(pen, 23f, 21f, 9f, 21f);
-            graphics.DrawLine(pen, 9f, 21f, 13f, 17f);
-            graphics.DrawLine(pen, 9f, 21f, 13f, 25f);
-        }
-
-        var handle = bitmap.GetHicon();
-        return new AppIcon(Icon.FromHandle(handle), handle);
-    }
-
-    public void Dispose()
-    {
-        Icon.Dispose();
-        if (_handle != IntPtr.Zero)
-        {
-            NativeMethods.DestroyIcon(_handle);
-        }
+        using var master = new Icon(stream);
+        return new Icon(master, size);
     }
 }

@@ -42,7 +42,8 @@ internal sealed class SettingsForm : Form
         ClientSize = new Size(500, 540);
         MinimumSize = new Size(440, 480);
         StartPosition = FormStartPosition.CenterScreen;
-        ShowIcon = false;
+        Icon = AppIcon.Window;
+        ShowIcon = true;
 
         var root = new TableLayoutPanel
         {

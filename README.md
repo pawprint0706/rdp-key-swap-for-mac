@@ -81,7 +81,8 @@ RdpKeySwap.exe --diagnose
 | `src/RdpKeySwap/Session/WtsSession.cs` | 세션 종류와 클라이언트 이름 조회 |
 | `src/RdpKeySwap/Session/SessionWatcher.cs` | 세션 연결·해제·잠금 알림 |
 | `src/RdpKeySwap/Settings/` | 이름 목록 저장, 이름 비교, 자동 실행 |
-| `src/RdpKeySwap/Ui/` | 트레이 아이콘과 설정 창 |
+| `src/RdpKeySwap/Ui/` | 아이콘 로드, 트레이 아이콘과 설정 창 |
+| `src/RdpKeySwap/Assets/app.ico` | 실행 파일·창·트레이가 함께 쓰는 아이콘 (16~256px 9개 크기) |
 
 설계상 지켜야 하는 동작:
 

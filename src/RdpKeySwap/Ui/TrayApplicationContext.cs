@@ -6,7 +6,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
     private const int MaxTrayTextLength = 63;
 
     private readonly AppController _controller;
-    private readonly AppIcon _icon;
     private readonly NotifyIcon _tray;
     private SettingsForm? _settingsForm;
     private bool _exiting;
@@ -14,7 +13,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
     public TrayApplicationContext(bool startInTray)
     {
         _controller = new AppController();
-        _icon = AppIcon.Create();
 
         var menu = new ContextMenuStrip();
         menu.Items.Add(new ToolStripMenuItem("설정 열기", null, (_, _) => ShowSettings()));
@@ -23,7 +21,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
         _tray = new NotifyIcon
         {
-            Icon = _icon.Icon,
+            Icon = AppIcon.Tray,
             Text = "RDP 키 스왑",
             Visible = true,
             ContextMenuStrip = menu,
@@ -76,7 +74,7 @@ internal sealed class TrayApplicationContext : ApplicationContext
         _tray.Visible = false;
         _tray.Dispose();
         _controller.Dispose();
-        _icon.Dispose();
+        AppIcon.Dispose();
         ExitThread();
     }
 }
