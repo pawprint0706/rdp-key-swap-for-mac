@@ -39,10 +39,10 @@ internal static class KeyDiagnostics
             if (raw.VirtualKey == VirtualKeys.Escape && !raw.IsUp)
             {
                 NativeMethods.PostQuitMessage(0);
-                return HookResult.Swallow();
+                return HookDisposition.Swallow;
             }
 
-            return HookResult.PassThrough();
+            return HookDisposition.PassThrough;
         });
 
         hook.Install();

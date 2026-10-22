@@ -11,16 +11,9 @@ public readonly record struct RawKeyEvent(
 
 public enum HookDisposition
 {
+    /// <summary>Let the original event continue to the system.</summary>
     PassThrough,
+
+    /// <summary>Drop the original event; the replacement was already delivered.</summary>
     Swallow,
-    Replace,
-}
-
-public readonly record struct HookResult(HookDisposition Disposition, KeyEmission Emission)
-{
-    public static HookResult PassThrough() => new(HookDisposition.PassThrough, default);
-
-    public static HookResult Swallow() => new(HookDisposition.Swallow, default);
-
-    public static HookResult Replace(KeyEmission emission) => new(HookDisposition.Replace, emission);
 }

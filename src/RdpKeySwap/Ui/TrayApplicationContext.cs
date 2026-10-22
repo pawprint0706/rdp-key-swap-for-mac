@@ -1,9 +1,14 @@
+using RdpKeySwap.Security;
+
 namespace RdpKeySwap.Ui;
 
 /// <summary>Tray-resident host: owns the controller, the tray icon and the settings window.</summary>
 internal sealed class TrayApplicationContext : ApplicationContext
 {
     private const int MaxTrayTextLength = 63;
+
+    /// <summary>Kept in step with the startup option that registers elevated login startup.</summary>
+    private const string AdminStartupArgument = "--admin-startup";
 
     private readonly AppController _controller;
     private readonly NotifyIcon _tray;
@@ -46,9 +51,29 @@ internal sealed class TrayApplicationContext : ApplicationContext
         }
 
         _settingsForm = new SettingsForm(_controller);
+        _settingsForm.ElevatedRestartRequested += OnElevatedRestartRequested;
         _settingsForm.FormClosed += (_, _) => _settingsForm = null;
         _settingsForm.Show();
         _settingsForm.Activate();
+    }
+
+    /// <summary>
+    /// Starts the administrator instance before leaving: the UAC prompt can still be cancelled,
+    /// and then this instance keeps running instead of leaving the user without a tray app.
+    /// </summary>
+    private void OnElevatedRestartRequested(object? sender, EventArgs e)
+    {
+        if (!Elevation.TryStartElevated(AdminStartupArgument))
+        {
+            MessageBox.Show(
+                "관리자 권한 요청이 취소되어 지금 상태로 계속 실행합니다.",
+                "RDP 키 스왑",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            return;
+        }
+
+        Exit();
     }
 
     private void UpdateTrayText()

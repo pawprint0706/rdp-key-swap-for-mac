@@ -97,12 +97,12 @@ public sealed class AppController : IDisposable
 
     private void ReleaseHeldKeys() => KeyInjector.SendAll(_remap.ReleaseAll());
 
-    private HookResult OnKeyEvent(RawKeyEvent e)
+    private HookDisposition OnKeyEvent(RawKeyEvent e)
     {
         // Our own synthesized events must reach the system untouched.
         if (e.IsInjected && (nuint)e.ExtraInfo == KeyInjector.Marker)
         {
-            return HookResult.PassThrough();
+            return HookDisposition.PassThrough;
         }
 
         var sourceKey = VirtualKeys.Normalize(e.VirtualKey, e.IsExtended);
@@ -111,31 +111,42 @@ public sealed class AppController : IDisposable
         // unmatched key-up, whether or not the remap is currently active.
         if (e.IsUp && _remap.TryConsumeSwallowedUp(sourceKey))
         {
-            return HookResult.Swallow();
+            return HookDisposition.Swallow;
         }
 
         if (!_status.IsActive)
         {
-            return HookResult.PassThrough();
+            return HookDisposition.PassThrough;
         }
-
-        RemapOutcome outcome;
-        KeyEmission emission;
 
         if (e.IsUp)
         {
-            outcome = _remap.HandleUp(sourceKey, out emission);
-        }
-        else
-        {
-            outcome = _remap.HandleDown(sourceKey, out emission);
+            var outcome = _remap.HandleUp(sourceKey, out var up);
+            return outcome switch
+            {
+                // A release the system refuses would leave the synthesized modifier held, so let
+                // the original key-up through instead.
+                RemapOutcome.Synthesized => KeyInjector.TrySend(up)
+                    ? HookDisposition.Swallow
+                    : HookDisposition.PassThrough,
+                RemapOutcome.Swallowed => HookDisposition.Swallow,
+                _ => HookDisposition.PassThrough,
+            };
         }
 
-        return outcome switch
+        if (!RemapState.TryGetDown(sourceKey, out var down))
         {
-            RemapOutcome.Synthesized => HookResult.Replace(emission),
-            RemapOutcome.Swallowed => HookResult.Swallow(),
-            _ => HookResult.PassThrough(),
-        };
+            return HookDisposition.PassThrough;
+        }
+
+        // UIPI refuses injected input while a higher-integrity window has focus. Forward the
+        // original key then: a key the target never receives must not be swallowed either.
+        if (!KeyInjector.TrySend(down))
+        {
+            return HookDisposition.PassThrough;
+        }
+
+        _remap.MarkDown(sourceKey, down);
+        return HookDisposition.Swallow;
     }
 }

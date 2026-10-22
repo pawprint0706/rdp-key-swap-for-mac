@@ -9,7 +9,12 @@ public static class KeyInjector
     /// <summary>Tag written into dwExtraInfo of every synthesized event ("RKSW").</summary>
     public const nuint Marker = 0x524B5357;
 
-    public static void Send(KeyEmission emission)
+    /// <summary>
+    /// Sends one synthesized event. Returns false when the system refused it, which happens
+    /// under UIPI while a higher-integrity window has focus; the caller must then let the
+    /// original key through instead of dropping it.
+    /// </summary>
+    public static bool TrySend(KeyEmission emission)
     {
         var input = new NativeMethods.Input
         {
@@ -32,14 +37,14 @@ public static class KeyInjector
             },
         };
 
-        NativeMethods.SendInput(1, [input], Marshal.SizeOf<NativeMethods.Input>());
+        return NativeMethods.SendInput(1, [input], Marshal.SizeOf<NativeMethods.Input>()) == 1;
     }
 
     public static void SendAll(IEnumerable<KeyEmission> emissions)
     {
         foreach (var emission in emissions)
         {
-            Send(emission);
+            TrySend(emission);
         }
     }
 

@@ -4,12 +4,19 @@ namespace RdpKeySwap.Tests;
 
 public class RemapStateTests
 {
+    private static KeyEmission Press(RemapState state, uint sourceKey)
+    {
+        Assert.True(RemapState.TryGetDown(sourceKey, out var down));
+        state.MarkDown(sourceKey, down);
+        return down;
+    }
+
     [Fact]
     public void Release_mirrors_the_press_it_replaced()
     {
         var state = new RemapState();
+        var down = Press(state, VirtualKeys.RightWin);
 
-        Assert.Equal(RemapOutcome.Synthesized, state.HandleDown(VirtualKeys.RightWin, out var down));
         Assert.Equal(RemapOutcome.Synthesized, state.HandleUp(VirtualKeys.RightWin, out var up));
 
         Assert.Equal(down.VirtualKey, up.VirtualKey);
@@ -24,32 +31,39 @@ public class RemapStateTests
     {
         var state = new RemapState();
 
-        state.HandleDown(VirtualKeys.LeftWin, out var first);
-        state.HandleDown(VirtualKeys.LeftWin, out var second);
+        var first = Press(state, VirtualKeys.LeftWin);
+        var second = Press(state, VirtualKeys.LeftWin);
 
         Assert.Equal(first, second);
         Assert.Equal(1, state.HeldCount);
     }
 
     [Fact]
-    public void Unmapped_key_is_forwarded_without_state()
+    public void Unmapped_key_has_no_replacement()
     {
+        Assert.False(RemapState.TryGetDown(VirtualKeys.LeftControl, out var down));
+        Assert.Equal(default, down);
+        Assert.False(RemapState.TryGetDown(0x41, out _));
+    }
+
+    [Fact]
+    public void Release_of_a_key_whose_press_was_forwarded_passes_through()
+    {
+        // The press was never marked (injection refused, or the program started mid-press), so
+        // the system saw the original key go down and needs the matching key-up.
         var state = new RemapState();
 
-        Assert.Equal(RemapOutcome.NotMapped, state.HandleDown(VirtualKeys.LeftControl, out var down));
-        Assert.Equal(default, down);
-        Assert.Equal(0, state.HeldCount);
-
-        Assert.Equal(RemapOutcome.NotMapped, state.HandleUp(VirtualKeys.LeftControl, out var up));
+        Assert.Equal(RemapOutcome.NotMapped, state.HandleUp(VirtualKeys.RightWin, out var up));
         Assert.Equal(default, up);
+        Assert.Equal(0, state.HeldCount);
     }
 
     [Fact]
     public void Releasing_everything_produces_releases_and_drops_the_later_key_up()
     {
         var state = new RemapState();
-        state.HandleDown(VirtualKeys.LeftWin, out _);
-        state.HandleDown(VirtualKeys.RightMenu, out _);
+        Press(state, VirtualKeys.LeftWin);
+        Press(state, VirtualKeys.RightMenu);
 
         var releases = state.ReleaseAll();
 
@@ -69,21 +83,13 @@ public class RemapStateTests
     public void New_press_after_release_clears_the_pending_swallow()
     {
         var state = new RemapState();
-        state.HandleDown(VirtualKeys.LeftWin, out _);
+        Press(state, VirtualKeys.LeftWin);
         state.ReleaseAll();
 
-        Assert.Equal(RemapOutcome.Synthesized, state.HandleDown(VirtualKeys.LeftWin, out _));
+        Press(state, VirtualKeys.LeftWin);
+
         Assert.False(state.TryConsumeSwallowedUp(VirtualKeys.LeftWin));
         Assert.Equal(RemapOutcome.Synthesized, state.HandleUp(VirtualKeys.LeftWin, out var up));
         Assert.True(up.IsUp);
-    }
-
-    [Fact]
-    public void Orphan_release_of_a_mapped_key_is_dropped()
-    {
-        var state = new RemapState();
-
-        Assert.Equal(RemapOutcome.Swallowed, state.HandleUp(VirtualKeys.RightWin, out var emission));
-        Assert.Equal(default, emission);
     }
 }

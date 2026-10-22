@@ -10,11 +10,11 @@ namespace RdpKeySwap.Keyboard;
 /// </summary>
 public sealed class KeyboardHook : IDisposable
 {
-    private readonly Func<RawKeyEvent, HookResult> _handler;
+    private readonly Func<RawKeyEvent, HookDisposition> _handler;
     private readonly NativeMethods.LowLevelKeyboardProc _callback;
     private IntPtr _handle;
 
-    public KeyboardHook(Func<RawKeyEvent, HookResult> handler)
+    public KeyboardHook(Func<RawKeyEvent, HookDisposition> handler)
     {
         _handler = handler;
         _callback = Callback;
@@ -69,26 +69,19 @@ public sealed class KeyboardHook : IDisposable
             (info.Flags & NativeMethods.LLKHF_INJECTED) != 0,
             info.ExtraInfo);
 
-        HookResult result;
+        HookDisposition disposition;
         try
         {
-            result = _handler(raw);
+            disposition = _handler(raw);
         }
         catch
         {
             // Never break the input chain because of a handler failure.
-            result = HookResult.PassThrough();
+            disposition = HookDisposition.PassThrough;
         }
 
-        switch (result.Disposition)
-        {
-            case HookDisposition.Swallow:
-                return (IntPtr)1;
-            case HookDisposition.Replace:
-                KeyInjector.Send(result.Emission);
-                return (IntPtr)1;
-            default:
-                return NativeMethods.CallNextHookEx(_handle, nCode, wParam, lParam);
-        }
+        return disposition == HookDisposition.Swallow
+            ? (IntPtr)1
+            : NativeMethods.CallNextHookEx(_handle, nCode, wParam, lParam);
     }
 }

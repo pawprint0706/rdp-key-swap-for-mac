@@ -1,3 +1,4 @@
+using RdpKeySwap.Security;
 using RdpKeySwap.Session;
 using RdpKeySwap.Settings;
 
@@ -13,6 +14,7 @@ internal sealed class SettingsForm : Form
     private readonly Label _clientValue = new();
     private readonly Label _applyValue = new();
     private readonly Label _reasonValue = new();
+    private readonly Label _elevationValue = new();
     private bool _syncing;
 
     public SettingsForm(AppController controller)
@@ -25,6 +27,9 @@ internal sealed class SettingsForm : Form
         _controller.StatusChanged += OnStatusChanged;
         FormClosed += (_, _) => _controller.StatusChanged -= OnStatusChanged;
     }
+
+    /// <summary>Raised when the user asks to continue as administrator; the host owns the restart.</summary>
+    public event EventHandler? ElevatedRestartRequested;
 
     internal static string ReasonText(InactiveReason reason) => reason switch
     {
@@ -49,10 +54,11 @@ internal sealed class SettingsForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 5,
+            RowCount = 6,
             Padding = new Padding(14),
         };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -60,12 +66,54 @@ internal sealed class SettingsForm : Form
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         root.Controls.Add(BuildStatusGroup(), 0, 0);
-        root.Controls.Add(BuildNamesGroup(), 0, 1);
-        root.Controls.Add(BuildAutoStartCheckBox(), 0, 2);
-        root.Controls.Add(BuildRulesLabel(), 0, 3);
-        root.Controls.Add(BuildFooter(), 0, 4);
+        root.Controls.Add(BuildElevationPanel(), 0, 1);
+        root.Controls.Add(BuildNamesGroup(), 0, 2);
+        root.Controls.Add(BuildAutoStartCheckBox(), 0, 3);
+        root.Controls.Add(BuildRulesLabel(), 0, 4);
+        root.Controls.Add(BuildFooter(), 0, 5);
 
         Controls.Add(root);
+    }
+
+    private Control BuildElevationPanel()
+    {
+        var panel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Margin = new Padding(0, 0, 0, 10),
+        };
+
+        var text = new Label
+        {
+            AutoSize = true,
+            MaximumSize = new Size(450, 0),
+            ForeColor = Elevation.IsElevated ? SystemColors.ControlText : SystemColors.GrayText,
+            Text = Elevation.IsElevated
+                ? "관리자 권한으로 실행 중입니다. 관리자 권한 앱에서도 키 변환이 적용됩니다."
+                : "지금은 일반 사용자 권한입니다. Windows는 낮은 권한에서 관리자 권한 앱으로 입력을 보내지 못하게 막으므로,\n"
+                    + "관리자 권한 앱에서는 변환이 적용되지 않고 원래 키가 전달됩니다.\n"
+                    + "아래 버튼은 관리자 권한 로그인 시작으로 등록하고 앱을 관리자 권한으로 다시 시작합니다.",
+            Margin = new Padding(0, 0, 0, 6),
+        };
+        panel.Controls.Add(text);
+
+        if (!Elevation.IsElevated)
+        {
+            var button = new Button
+            {
+                Text = "관리자 권한으로 등록하고 다시 시작",
+                AutoSize = true,
+                Margin = new Padding(0),
+            };
+            button.Click += (_, _) => ElevatedRestartRequested?.Invoke(this, EventArgs.Empty);
+            panel.Controls.Add(button);
+        }
+
+        return panel;
     }
 
     private GroupBox BuildStatusGroup()
@@ -94,6 +142,7 @@ internal sealed class SettingsForm : Form
         AddStatusRow(grid, 1, "클라이언트", _clientValue);
         AddStatusRow(grid, 2, "적용", _applyValue);
         AddStatusRow(grid, 3, "사유", _reasonValue);
+        AddStatusRow(grid, 4, "권한", _elevationValue);
 
         group.Controls.Add(grid);
         return group;
@@ -363,6 +412,7 @@ internal sealed class SettingsForm : Form
         };
 
         _clientValue.Text = status.ClientName ?? "확인할 수 없음";
+        _elevationValue.Text = Elevation.IsElevated ? "관리자" : "일반 사용자";
         _applyValue.Text = status.IsActive ? "켜짐" : "꺼짐";
         _applyValue.ForeColor = status.IsActive ? Color.FromArgb(21, 128, 61) : SystemColors.ControlText;
         _reasonValue.Text = ReasonText(status.Reason);
