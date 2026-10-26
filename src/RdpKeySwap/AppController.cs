@@ -33,6 +33,7 @@ public sealed class AppController : IDisposable
         _store = store ?? new SettingsStore();
         _settings = _store.Load();
         _sessionId = Process.GetCurrentProcess().SessionId;
+        _remap.RightOptionAsRightControl = _settings.MapRightOptionToRightControl;
 
         _status = Evaluate();
 
@@ -56,10 +57,22 @@ public sealed class AppController : IDisposable
 
     public void UpdateClientNames(IEnumerable<string?> names)
     {
-        var normalized = ClientNameMatcher.Normalize(names);
-        _settings = new AppSettings { ClientNames = normalized.ToList() };
+        _settings.ClientNames = ClientNameMatcher.Normalize(names).ToList();
         _store.Save(_settings);
         Refresh();
+    }
+
+    /// <summary>Applies the right Option mapping to the running hook and stores the choice.</summary>
+    public void UpdateRightOptionMapping(bool mapToRightControl)
+    {
+        if (_settings.MapRightOptionToRightControl == mapToRightControl)
+        {
+            return;
+        }
+
+        _settings.MapRightOptionToRightControl = mapToRightControl;
+        _remap.RightOptionAsRightControl = mapToRightControl;
+        _store.Save(_settings);
     }
 
     /// <summary>Re-reads the session and re-evaluates the apply condition.</summary>
@@ -134,7 +147,7 @@ public sealed class AppController : IDisposable
             };
         }
 
-        if (!RemapState.TryGetDown(sourceKey, out var down))
+        if (!_remap.TryGetDown(sourceKey, out var down))
         {
             return HookDisposition.PassThrough;
         }

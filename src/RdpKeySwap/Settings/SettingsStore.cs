@@ -39,7 +39,11 @@ public sealed class SettingsStore
         }
 
         var normalized = ClientNameMatcher.Normalize(settings?.ClientNames);
-        return new AppSettings { ClientNames = normalized.ToList() };
+        return new AppSettings
+        {
+            ClientNames = normalized.ToList(),
+            MapRightOptionToRightControl = settings?.MapRightOptionToRightControl ?? false,
+        };
     }
 
     public void Save(AppSettings settings)
@@ -53,6 +57,7 @@ public sealed class SettingsStore
         var normalized = new AppSettings
         {
             ClientNames = ClientNameMatcher.Normalize(settings.ClientNames).ToList(),
+            MapRightOptionToRightControl = settings.MapRightOptionToRightControl,
         };
 
         var temporaryPath = FilePath + ".tmp";

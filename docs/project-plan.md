@@ -27,6 +27,8 @@ macOS 단축키를 Windows 단축키로 호환시키는 프로그램이 아니�
 | Option | Alt | Windows 키 |
 | 그 외 | 해당 입력 | 그대로 |
 
+설정에서 `우측 Option을 우측 Ctrl로 매핑`을 켜면 위 표의 `Option → Windows 키` 규칙이 우측 Option에 한해 `우측 Option → 우측 Ctrl`로 바뀐다. 애플 순정 키보드의 우측 배열(Command·Option)을 Windows가 기대하는 배열(Alt·Ctrl)에 맞추기 위한 선택 사항이며, 우측 키가 Command·Control인 외부 키보드에서는 켤 필요가 없다. 좌측 Option과 나머지 규칙은 이 설정과 무관하다.
+
 좌우 구분이 전달되는 경우 유지하며, 누름과 뗌에 동일한 규칙을 적용한다. 다른 modifier나 일반 키와 함께 눌러도 이 규칙은 바뀌지 않는다.
 
 단축키별 예외, 앱별 동작, 조합 감지, 별도 명령 실행은 추가하지 않는다. 변환된 modifier 조합의 의미는 Windows와 해당 앱이 결정한다.

@@ -24,10 +24,14 @@ public sealed class RemapState
 
     public int HeldCount => _held.Count;
 
+    /// <summary>Mirrors the user setting that sends the right Option to the right Ctrl key.</summary>
+    public bool RightOptionAsRightControl { get; set; }
+
     public bool IsHolding(uint sourceKey) => _held.ContainsKey(sourceKey);
 
     /// <summary>The replacement a press would produce, before anything is delivered.</summary>
-    public static bool TryGetDown(uint sourceKey, out KeyEmission down) => KeyMap.TryMap(sourceKey, out down);
+    public bool TryGetDown(uint sourceKey, out KeyEmission down) =>
+        KeyMap.TryMap(sourceKey, RightOptionAsRightControl, out down);
 
     /// <summary>True when the release of this key must be dropped instead of forwarded.</summary>
     public bool TryConsumeSwallowedUp(uint sourceKey) => _swallowUp.Remove(sourceKey);

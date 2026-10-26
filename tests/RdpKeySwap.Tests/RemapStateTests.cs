@@ -6,7 +6,7 @@ public class RemapStateTests
 {
     private static KeyEmission Press(RemapState state, uint sourceKey)
     {
-        Assert.True(RemapState.TryGetDown(sourceKey, out var down));
+        Assert.True(state.TryGetDown(sourceKey, out var down));
         state.MarkDown(sourceKey, down);
         return down;
     }
@@ -41,9 +41,11 @@ public class RemapStateTests
     [Fact]
     public void Unmapped_key_has_no_replacement()
     {
-        Assert.False(RemapState.TryGetDown(VirtualKeys.LeftControl, out var down));
+        var state = new RemapState();
+
+        Assert.False(state.TryGetDown(VirtualKeys.LeftControl, out var down));
         Assert.Equal(default, down);
-        Assert.False(RemapState.TryGetDown(0x41, out _));
+        Assert.False(state.TryGetDown(0x41, out _));
     }
 
     [Fact]

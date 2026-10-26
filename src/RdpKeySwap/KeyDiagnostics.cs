@@ -24,17 +24,19 @@ internal static class KeyDiagnostics
 
         var sessionId = Process.GetCurrentProcess().SessionId;
         var session = WtsSession.Query(sessionId);
-        var status = AppStatus.Evaluate(session, new SettingsStore().Load().ClientNames);
+        var settings = new SettingsStore().Load();
+        var status = AppStatus.Evaluate(session, settings.ClientNames);
 
         output.WriteLine("RDP 키 스왑 — 입력 진단 (변환하지 않고 관측만 합니다)");
         output.WriteLine($"세션: {session.Kind} (id {session.SessionId}), 클라이언트: {session.ClientName ?? "없음"}");
         output.WriteLine($"현재 설정 기준 적용 여부: {(status.IsActive ? "켜짐" : "꺼짐")} ({status.Reason})");
+        output.WriteLine($"우측 Option → 우측 Ctrl: {(settings.MapRightOptionToRightControl ? "켜짐" : "꺼짐")}");
         output.WriteLine("키를 눌러 전달되는 코드를 확인하세요. Esc 로 종료합니다.");
         output.WriteLine();
 
         using var hook = new KeyboardHook(raw =>
         {
-            Print(output, raw);
+            Print(output, raw, settings.MapRightOptionToRightControl);
 
             if (raw.VirtualKey == VirtualKeys.Escape && !raw.IsUp)
             {
@@ -64,12 +66,12 @@ internal static class KeyDiagnostics
         return 0;
     }
 
-    private static void Print(TextWriter output, RawKeyEvent raw)
+    private static void Print(TextWriter output, RawKeyEvent raw, bool rightOptionAsRightControl)
     {
         var source = VirtualKeys.Normalize(raw.VirtualKey, raw.IsExtended);
         var flags = (raw.IsExtended ? " ext" : string.Empty) + (raw.IsInjected ? " injected" : string.Empty);
 
-        var verdict = KeyMap.TryMap(source, out var mapped)
+        var verdict = KeyMap.TryMap(source, rightOptionAsRightControl, out var mapped)
             ? $"→ 변환 {Describe(mapped.VirtualKey)}{(mapped.IsExtended ? " ext" : string.Empty)}"
             : "→ 그대로";
 

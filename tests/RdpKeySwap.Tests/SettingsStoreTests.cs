@@ -57,6 +57,24 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void Right_option_mapping_survives_a_reload()
+    {
+        var store = CreateStore();
+        store.Save(new AppSettings { ClientNames = { "example-mac" }, MapRightOptionToRightControl = true });
+
+        var loaded = CreateStore().Load();
+
+        Assert.True(loaded.MapRightOptionToRightControl);
+        Assert.Equal(new[] { "example-mac" }, loaded.ClientNames);
+    }
+
+    [Fact]
+    public void Right_option_mapping_defaults_to_off()
+    {
+        Assert.False(CreateStore().Load().MapRightOptionToRightControl);
+    }
+
+    [Fact]
     public void Save_replaces_the_previous_file()
     {
         var store = CreateStore();

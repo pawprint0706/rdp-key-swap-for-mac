@@ -10,6 +10,8 @@ internal sealed class SettingsForm : Form
     private readonly ListBox _nameList = new();
     private readonly TextBox _nameInput = new();
     private readonly CheckBox _autoStart = new();
+    private readonly CheckBox _rightOptionAsCtrl = new();
+    private readonly ToolTip _tooltip = new();
     private readonly Label _sessionValue = new();
     private readonly Label _clientValue = new();
     private readonly Label _applyValue = new();
@@ -25,7 +27,11 @@ internal sealed class SettingsForm : Form
         LoadState();
 
         _controller.StatusChanged += OnStatusChanged;
-        FormClosed += (_, _) => _controller.StatusChanged -= OnStatusChanged;
+        FormClosed += (_, _) =>
+        {
+            _controller.StatusChanged -= OnStatusChanged;
+            _tooltip.Dispose();
+        };
     }
 
     /// <summary>Raised when the user asks to continue as administrator; the host owns the restart.</summary>
@@ -54,7 +60,7 @@ internal sealed class SettingsForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 6,
+            RowCount = 7,
             Padding = new Padding(14),
         };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -64,13 +70,15 @@ internal sealed class SettingsForm : Form
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         root.Controls.Add(BuildStatusGroup(), 0, 0);
         root.Controls.Add(BuildElevationPanel(), 0, 1);
         root.Controls.Add(BuildNamesGroup(), 0, 2);
         root.Controls.Add(BuildAutoStartCheckBox(), 0, 3);
-        root.Controls.Add(BuildRulesLabel(), 0, 4);
-        root.Controls.Add(BuildFooter(), 0, 5);
+        root.Controls.Add(BuildRightOptionCheckBox(), 0, 4);
+        root.Controls.Add(BuildRulesLabel(), 0, 5);
+        root.Controls.Add(BuildFooter(), 0, 6);
 
         Controls.Add(root);
     }
@@ -255,6 +263,21 @@ internal sealed class SettingsForm : Form
         return _autoStart;
     }
 
+    private CheckBox BuildRightOptionCheckBox()
+    {
+        _rightOptionAsCtrl.Text = "우측 Option을 우측 Ctrl로 매핑";
+        _rightOptionAsCtrl.AutoSize = true;
+        _rightOptionAsCtrl.Margin = new Padding(0, 0, 0, 6);
+        _rightOptionAsCtrl.CheckedChanged += OnRightOptionChanged;
+
+        _tooltip.SetToolTip(
+            _rightOptionAsCtrl,
+            "애플 순정 키보드는 우측이 Command와 Option이지만, Windows는 그 자리에 Alt(한/영)와 Ctrl(한자)을 기대합니다.\n"
+            + "켜면 우측 Option이 우측 Ctrl로 전달됩니다. 우측 키가 Command와 Control인 외부 키보드에서는 필요 없습니다.");
+
+        return _rightOptionAsCtrl;
+    }
+
     private static Label BuildRulesLabel() => new()
     {
         Text = "적용 규칙: Command → Alt, Option → Windows 키, Control → Ctrl",
@@ -307,6 +330,7 @@ internal sealed class SettingsForm : Form
 
         _syncing = true;
         _autoStart.Checked = AutoStart.IsEnabled();
+        _rightOptionAsCtrl.Checked = _controller.Settings.MapRightOptionToRightControl;
         _syncing = false;
 
         UpdateStatus();
@@ -382,6 +406,16 @@ internal sealed class SettingsForm : Form
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
         }
+    }
+
+    private void OnRightOptionChanged(object? sender, EventArgs e)
+    {
+        if (_syncing)
+        {
+            return;
+        }
+
+        _controller.UpdateRightOptionMapping(_rightOptionAsCtrl.Checked);
     }
 
     private void OnStatusChanged(object? sender, EventArgs e)
