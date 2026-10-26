@@ -12,6 +12,8 @@ internal sealed class SettingsForm : Form
     private readonly CheckBox _autoStart = new();
     private readonly CheckBox _rightOptionAsCtrl = new();
     private readonly ToolTip _tooltip = new();
+    private readonly FlowLayoutPanel _guidancePanel = new();
+    private readonly Label _guidanceText = new();
     private readonly Label _sessionValue = new();
     private readonly Label _clientValue = new();
     private readonly Label _applyValue = new();
@@ -49,9 +51,13 @@ internal sealed class SettingsForm : Form
 
     private void BuildLayout()
     {
+        // The layout below is authored for 96 DPI; WinForms scales it for the active monitor.
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96F, 96F);
+
         Text = "RDP 키 스왑";
-        ClientSize = new Size(500, 540);
-        MinimumSize = new Size(440, 480);
+        ClientSize = new Size(500, 560);
+        MinimumSize = new Size(440, 420);
         StartPosition = FormStartPosition.CenterScreen;
         Icon = AppIcon.Window;
         ShowIcon = true;
@@ -83,31 +89,70 @@ internal sealed class SettingsForm : Form
         Controls.Add(root);
     }
 
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+        ApplyDpiMetrics();
+    }
+
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        UpdateGuidanceWidth();
+    }
+
+    protected override void OnDpiChanged(DpiChangedEventArgs e)
+    {
+        base.OnDpiChanged(e);
+        ApplyDpiMetrics();
+    }
+
+    /// <summary>
+    /// Applies the sizes WinForms does not scale for us. A form created at a scaled DPI gets its
+    /// children scaled but keeps the authored ClientSize, so the content overflows; the client
+    /// size is therefore set from logical units every time the DPI is known.
+    /// </summary>
+    private void ApplyDpiMetrics()
+    {
+        MinimumSize = LogicalToDeviceUnits(new Size(440, 420));
+        ClientSize = LogicalToDeviceUnits(new Size(500, 560));
+        UpdateGuidanceWidth();
+    }
+
+    /// <summary>Keeps the guidance text wrapping inside the available width on any DPI or window size.</summary>
+    private void UpdateGuidanceWidth()
+    {
+        var available = _guidancePanel.ClientSize.Width;
+        if (available <= 0)
+        {
+            return;
+        }
+
+        var limit = new Size(available, 0);
+        if (_guidanceText.MaximumSize != limit)
+        {
+            _guidanceText.MaximumSize = limit;
+        }
+    }
+
     private Control BuildElevationPanel()
     {
-        var panel = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Margin = new Padding(0, 0, 0, 10),
-        };
+        _guidancePanel.Dock = DockStyle.Fill;
+        _guidancePanel.FlowDirection = FlowDirection.TopDown;
+        _guidancePanel.WrapContents = false;
+        _guidancePanel.AutoSize = true;
+        _guidancePanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        _guidancePanel.Margin = new Padding(0, 0, 0, 10);
 
-        var text = new Label
-        {
-            AutoSize = true,
-            MaximumSize = new Size(450, 0),
-            ForeColor = Elevation.IsElevated ? SystemColors.ControlText : SystemColors.GrayText,
-            Text = Elevation.IsElevated
-                ? "관리자 권한으로 실행 중입니다. 관리자 권한 앱에서도 키 변환이 적용됩니다."
-                : "지금은 일반 사용자 권한입니다. Windows는 낮은 권한에서 관리자 권한 앱으로 입력을 보내지 못하게 막으므로,\n"
-                    + "관리자 권한 앱에서는 변환이 적용되지 않고 원래 키가 전달됩니다.\n"
-                    + "아래 버튼은 관리자 권한 로그인 시작으로 등록하고 앱을 관리자 권한으로 다시 시작합니다.",
-            Margin = new Padding(0, 0, 0, 6),
-        };
-        panel.Controls.Add(text);
+        _guidanceText.AutoSize = true;
+        _guidanceText.ForeColor = Elevation.IsElevated ? SystemColors.ControlText : SystemColors.GrayText;
+        _guidanceText.Text = Elevation.IsElevated
+            ? "관리자 권한으로 실행 중입니다. 관리자 권한 앱에서도 키 변환이 적용됩니다."
+            : "지금은 일반 사용자 권한입니다. Windows는 낮은 권한에서 관리자 권한 앱으로 입력을 보내지 못하게 막으므로, "
+                + "관리자 권한 앱에서는 변환이 적용되지 않고 원래 키가 전달됩니다. "
+                + "아래 버튼은 관리자 권한 로그인 시작으로 등록하고 앱을 관리자 권한으로 다시 시작합니다.";
+        _guidanceText.Margin = new Padding(0, 0, 0, 6);
+        _guidancePanel.Controls.Add(_guidanceText);
 
         if (!Elevation.IsElevated)
         {
@@ -118,10 +163,10 @@ internal sealed class SettingsForm : Form
                 Margin = new Padding(0),
             };
             button.Click += (_, _) => ElevatedRestartRequested?.Invoke(this, EventArgs.Empty);
-            panel.Controls.Add(button);
+            _guidancePanel.Controls.Add(button);
         }
 
-        return panel;
+        return _guidancePanel;
     }
 
     private GroupBox BuildStatusGroup()

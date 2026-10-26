@@ -65,7 +65,7 @@ macOS 단축키를 Windows 단축키로 호환시키는 프로그램이 아니�
 개발 스택은 **C# / .NET + Windows Forms + Win32 API**를 기본안으로 한다.
 
 - C# / .NET: 키 변환 상태와 설정 관리.
-- Windows Forms: 최소 설정 화면과 상주 실행을 위한 메시지 루프.
+- Windows Forms: 최소 설정 화면과 상주 실행을 위한 메시지 루프. 화면은 96 DPI 기준으로 배치하고 `AutoScaleMode.Dpi`로 배율에 맞춰 확장한다. 고정 크기·줄바꿈 폭은 장치 단위로 환산해 적용하여 100~200% 배율과 모니터 간 이동에서도 잘리지 않게 한다.
 - Win32 API(P/Invoke): `WTSQuerySessionInformation`으로 RDP 세션·클라이언트 이름 조회, WTS 세션 알림으로 접속 변경 감지, `WH_KEYBOARD_LL`로 입력 가로채기, `SendInput`으로 변환 입력 전달.
 
 별도의 C++ 모듈이나 키보드 드라이버는 기본안에 포함하지 않는다. 단축키 편집기, 앱별 프로필도 이번 계획에 포함하지 않는다.
