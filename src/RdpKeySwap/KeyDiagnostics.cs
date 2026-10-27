@@ -68,7 +68,11 @@ internal static class KeyDiagnostics
 
     private static void Print(TextWriter output, RawKeyEvent raw, bool rightOptionAsRightControl)
     {
-        var source = VirtualKeys.Normalize(raw.VirtualKey, raw.IsExtended);
+        var source = SourceKeys.Resolve(
+            raw.VirtualKey,
+            raw.ScanCode,
+            raw.IsExtended,
+            rightOptionAsRightControl);
         var flags = (raw.IsExtended ? " ext" : string.Empty) + (raw.IsInjected ? " injected" : string.Empty);
 
         var verdict = KeyMap.TryMap(source, rightOptionAsRightControl, out var mapped)

@@ -71,6 +71,10 @@ public sealed class AppController : IDisposable
         }
 
         _settings.MapRightOptionToRightControl = mapToRightControl;
+
+        // The rule decides how the same key is recognized, so a key held across the change is
+        // released instead of waiting for a key-up this rule no longer produces.
+        ReleaseHeldKeys();
         _remap.RightOptionAsRightControl = mapToRightControl;
         _store.Save(_settings);
     }
@@ -118,7 +122,11 @@ public sealed class AppController : IDisposable
             return HookDisposition.PassThrough;
         }
 
-        var sourceKey = VirtualKeys.Normalize(e.VirtualKey, e.IsExtended);
+        var sourceKey = SourceKeys.Resolve(
+            e.VirtualKey,
+            e.ScanCode,
+            e.IsExtended,
+            _remap.RightOptionAsRightControl);
 
         // A release that belongs to a key we already released must not reach the system as an
         // unmatched key-up, whether or not the remap is currently active.
